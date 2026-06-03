@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="My To-Dos">
+<meta name="theme-color" content="#5b4cf5">
+<title>My To-Dos</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%235b4cf5'/%3E%3Cpath d='M28 50l14 14 30-28' stroke='white' stroke-width='8' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E">
+<style>
+:root {
+  --purple: #5b4cf5;
+  --purple-dark: #4a3de0;
+  --purple-light: #ece9ff;
+  --bg: #f5f4f0;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #999;
+  --border: #e8e7e2;
+  --done-text: #c0bfba;
+  --red: #e05252;
+  --green: #22c55e;
+  --orange: #f97316;
+  --bar-h: 68px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding-bottom: calc(var(--bar-h) + 20px);
+}
+.app { max-width: 560px; margin: 0 auto; padding: 32px 16px 0; }
+
+/* Header */
+.date-line { font-size: 12px; font-weight: 600; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.day-title { font-size: 26px; font-weight: 750; letter-spacing: -.5px; }
+.progress-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 20px; }
+.progress-bar { flex: 1; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--purple); border-radius: 99px; transition: width .4s ease; }
+.progress-text { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+/* Day tabs */
+.day-tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+.day-tabs::-webkit-scrollbar { display: none; }
+.day-tab {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--card);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+}
+.day-tab.active { background: var(--purple); border-color: var(--purple); color: #fff; font-weight: 600; }
+.day-tab .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--orange); margin-left: 5px; vertical-align: middle; }
+.day-tab.active .dot { background: rgba(255,255,255,.7); }
+
+/* Add bar */
+.add-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+.add-bar input {
+  flex: 1; padding: 12px 14px;
+  border: 2px solid var(--border); border-radius: 13px;
+  font-size: 15px; background: var(--card); color: var(--text);
+  outline: none; transition: border-color .2s; -webkit-appearance: none;
+}
+.add-bar input:focus { border-color: var(--purple); }
+.add-bar input::placeholder { color: #c5c4bf; }
+.btn-add {
+  width: 44px; height: 44px; border-radius: 13px;
+  background: var(--purple); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: background .15s, transform .1s;
+}
+.btn-add:active { background: var(--purple-dark); transform: scale(.93); }
+
+/* Task list */
+.task-list { list-style: none; }
+.task-item {
+  display: flex; align-items: center; gap: 11px;
+  background: var(--card); border-radius: 13px;
+  padding: 13px 12px; margin-bottom: 7px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  user-select: none; -webkit-user-select: none;
+}
+.task-item.done { opacity: .45; }
+.task-item.carried { border-left: 3px solid var(--orange); padding-left: 10px; }
+.task-item.future { border-left: 3px solid var(--purple); padding-left: 10px; }
+.task-item.entering { animation: popIn .22s cubic-bezier(.34,1.56,.64,1); }
+@keyframes popIn { from { opacity:0; transform:scale(.94) translateY(-4px); } to { opacity:1; transform:scale(1) translateY(0); } }
+
+.check-btn {
+  width: 24px; height: 24px; border-radius: 50%;
+  border: 2px solid var(--border); flex-shrink: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; transition: all .15s; -webkit-appearance: none;
+}
+.check-btn:active { transform: scale(.85); }
+.task-item.done .check-btn { background: var(--purple); border-color: var(--purple); }
+.check-tick { display: none; }
+.task-item.done .check-tick { display: block; }
+
+.task-body { flex: 1; min-width: 0; }
+.task-text { font-size: 15px; line-height: 1.4; word-break: break-word; }
+.task-item.done .task-text { text-decoration: line-through; color: var(--done-text); }
+.task-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.task-meta.carried-tag { color: var(--orange); }
+
+.del-btn {
+  background: none; border: none; color: #d0cfc9;
+  font-size: 19px; cursor: pointer; padding: 4px;
+  flex-shrink: 0; line-height: 1;
+}
+.del-btn:active { color: var(--red); }
+
+/* Empty */
+.empty { text-align: center; padding: 32px 0 16px; color: var(--muted); font-size: 14px; }
+.empty-icon { font-size: 36px; margin-bottom: 8px; }
+
+/* Completed section */
+.section-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: #c0bfba; margin: 16px 0 8px; }
+
+/* Bottom bar */
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: #f5f4f0; border-top: 1px solid var(--border);
+  padding: 10px 12px 14px;
+  display: flex; gap: 7px; z-index: 50;
+}
+.btn-bar {
+  flex: 1; padding: 10px 6px; border-radius: 11px;
+  border: 1.5px solid var(--border); background: var(--card);
+  color: #555; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all .15s; -webkit-appearance: none;
+  white-space: nowrap;
+}
+.btn-bar:active { background: var(--purple-light); border-color: var(--purple); color: var(--purple); }
+.btn-bar.danger:active { background: #fff0f0; border-color: var(--red); color: var(--red); }
+
+/* Modal */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 100; opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--card); border-radius: 22px 22px 0 0;
+  padding: 20px 18px 32px; width: 100%; max-width: 560px;
+  transform: translateY(20px); transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+}
+.overlay.open .modal { transform: translateY(0); }
+.modal-title { font-size: 17px; font-weight: 700; margin-bottom: 5px; }
+.modal-desc { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.5; }
+.modal-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.modal-tab {
+  flex: 1; padding: 8px; border-radius: 10px; border: none;
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s;
+  background: var(--bg); color: var(--muted);
+}
+.modal-tab.active { background: var(--purple-light); color: var(--purple); }
+textarea.sync-code {
+  width: 100%; height: 90px; padding: 11px; border: 2px solid var(--border);
+  border-radius: 11px; font-size: 12px; font-family: monospace;
+  resize: none; background: var(--bg); color: var(--text);
+  outline: none; transition: border-color .2s;
+}
+textarea.sync-code:focus { border-color: var(--purple); }
+.modal-btns { display: flex; gap: 8px; margin-top: 12px; }
+.btn-modal {
+  flex: 1; padding: 13px; border-radius: 12px; border: none;
+  font-size: 15px; font-weight: 600; cursor: pointer; -webkit-appearance: none;
+  transition: opacity .15s, transform .1s;
+}
+.btn-modal:active { opacity: .8; transform: scale(.97); }
+.btn-modal.primary { background: var(--purple); color: #fff; }
+.btn-modal.secondary { background: var(--border); color: #555; }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 88px; left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  background: #1a1a1a; color: #fff;
+  padding: 9px 18px; border-radius: 99px;
+  font-size: 13px; font-weight: 500;
+  opacity: 0; pointer-events: none; z-index: 200;
+  transition: opacity .2s, transform .2s; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="date-line" id="dateLine"></div>
+  <div class="day-title" id="dayTitle"></div>
+  <div class="progress-row">
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+    <div class="progress-text" id="progressText">No tasks</div>
+  </div>
+
+  <!-- Day tabs -->
+  <div class="day-tabs" id="dayTabs"></div>
+
+  <!-- Add bar -->
+  <div class="add-bar">
+    <input type="text" id="newInput" placeholder="Add a task…" maxlength="250" autocomplete="off" autocorrect="off" autocapitalize="sentences" />
+    <button class="btn-add" id="addBtn" aria-label="Add">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M9 3v12M3 9h12" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+  </div>
+
+  <ul class="task-list" id="pendingList"></ul>
+  <div class="empty" id="emptyState" style="display:none">
+    <div class="empty-icon">🎉</div>
+    All done for today!
+  </div>
+
+  <div id="doneSection" style="display:none">
+    <div class="section-label">Completed</div>
+    <ul class="task-list" id="doneList"></ul>
+  </div>
+</div>
+
+<!-- Bottom bar -->
+<div class="bottom-bar">
+  <button class="btn-bar" id="syncBtn">⇅ Sync</button>
+  <button class="btn-bar" id="clearDoneBtn">✓ Clear done</button>
+  <button class="btn-bar danger" id="clearAllBtn">⊘ Clear all</button>
+</div>
+
+<!-- Sync modal -->
+<div class="overlay" id="syncOverlay">
+  <div class="modal">
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tabCopy" onclick="setTab('copy')">Copy to device</button>
+      <button class="modal-tab" id="tabPaste" onclick="setTab('paste')">Import from device</button>
+    </div>
+    <div class="modal-title" id="syncTitle"></div>
+    <div class="modal-desc" id="syncDesc"></div>
+    <textarea class="sync-code" id="syncCode" spellcheck="false" placeholder="Paste sync code here…"></textarea>
+    <div class="modal-btns">
+      <button class="btn-modal secondary" id="syncCancel">Cancel</button>
+      <button class="btn-modal primary" id="syncAction">Copy code</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Constants ────────────────────────────────────────────────────────
+const STORE = 'tayla_todos_v3';
+const DAYS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+// ─── Date helpers ────────────────────────────────────────────────────
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function keyForOffset(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function labelForKey(key) {
+  const today = todayKey();
+  const d = new Date(key + 'T00:00:00');
+  const diff = Math.round((new Date(key+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff === -1) return 'Yesterday';
+  if (diff > 1 && diff < 7) return FULL[d.getDay()];
+  return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short' });
+}
+
+function fullLabelForKey(key) {
+  const d = new Date(key + 'T00:00:00');
+  return d.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+// ─── Storage ─────────────────────────────────────────────────────────
+function loadAll() {
+  try { return JSON.parse(localStorage.getItem(STORE)) || {}; }
+  catch { return {}; }
+}
+
+function saveAll(data) {
+  localStorage.setItem(STORE, JSON.stringify(data));
+}
+
+function getTasks(key) {
+  return loadAll()[key] || [];
+}
+
+function setTasks(key, tasks) {
+  const data = loadAll();
+  data[key] = tasks;
+  saveAll(data);
+}
+
+// ─── Carry-over: move unfinished past tasks to today ─────────────────
+function carryOver() {
+  const data = loadAll();
+  const today = todayKey();
+  let changed = false;
+
+  Object.keys(data).forEach(key => {
+    if (key >= today) return;
+    const unfinished = data[key].filter(t => !t.done);
+    if (!unfinished.length) return;
+
+    // Mark as carried and move to today
+    const todayTasks = data[today] || [];
+    const existingIds = new Set(todayTasks.map(t => t.id));
+    unfinished.forEach(t => {
+      if (!existingIds.has(t.id)) {
+        todayTasks.push({ ...t, carried: true, carriedFrom: key, done: false });
+      }
+    });
+    data[today] = todayTasks;
+    // Remove unfinished from old day (keep done ones for history)
+    data[key] = data[key].filter(t => t.done);
+    if (!data[key].length) delete data[key];
+    changed = true;
+  });
+
+  if (changed) saveAll(data);
+}
+
+// ─── State ───────────────────────────────────────────────────────────
+let activeDay = todayKey();
+let syncTab = 'copy';
+
+// ─── Render ──────────────────────────────────────────────────────────
+function render() {
+  const tasks   = getTasks(activeDay);
+  const pending = tasks.filter(t => !t.done);
+  const done    = tasks.filter(t => t.done);
+  const today   = todayKey();
+
+  // Header
+  document.getElementById('dateLine').textContent = fullLabelForKey(activeDay);
+  const diff = Math.round((new Date(activeDay+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+  document.getElementById('dayTitle').textContent =
+    diff === 0 ? "Today's Tasks" :
+    diff === 1 ? "Tomorrow's Tasks" :
+    labelForKey(activeDay) + "'s Tasks";
+
+  // Progress
+  const total = tasks.length;
+  const pct   = total ? Math.round((done.length / total) * 100) : 0;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressText').textContent = total ? `${done.length}/${total} done` : 'No tasks';
+
+  // Day tabs
+  renderTabs();
+
+  // Pending list
+  const pList = document.getElementById('pendingList');
+  pList.innerHTML = '';
+  document.getElementById('emptyState').style.display = (total > 0 && !pending.length) ? 'block' : 'none';
+  pending.forEach(t => pList.appendChild(makeItem(t)));
+
+  // Done list
+  const dSection = document.getElementById('doneSection');
+  const dList    = document.getElementById('doneList');
+  dList.innerHTML = '';
+  if (done.length) { dSection.style.display = 'block'; done.forEach(t => dList.appendChild(makeItem(t))); }
+  else dSection.style.display = 'none';
+}
+
+function renderTabs() {
+  const data  = loadAll();
+  const today = todayKey();
+  const tabs  = document.getElementById('dayTabs');
+  tabs.innerHTML = '';
+
+  // Show today + next 6 days, plus any past days with tasks
+  const keys = new Set();
+  for (let i = 0; i < 7; i++) keys.add(keyForOffset(i));
+  Object.keys(data).forEach(k => keys.add(k));
+
+  [...keys].sort().forEach(key => {
+    const diff = Math.round((new Date(key+'T00:00:00') - new Date(today+'T00:00:00')) / 86400000);
+    if (diff < -1) return; // hide old days with no tasks
+    const tasks = data[key] || [];
+    const hasPending = tasks.some(t => !t.done);
+
+    const btn = document.createElement('button');
+    btn.className = 'day-tab' + (key === activeDay ? ' active' : '');
+    btn.textContent = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : labelForKey(key);
+    if (hasPending && key !== activeDay) {
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      btn.appendChild(dot);
+    }
+    btn.addEventListener('click', () => { activeDay = key; render(); });
+    tabs.appendChild(btn);
+  });
+}
+
+function makeItem(t) {
+  const li = document.createElement('li');
+  li.className = 'task-item' + (t.done ? ' done' : '') + (t.carried ? ' carried' : '') + (t._new ? ' entering' : '');
+
+  if (t._new) {
+    setTimeout(() => {
+      const tasks = getTasks(activeDay);
+      const idx = tasks.findIndex(x => x.id === t.id);
+      if (idx !== -1) { delete tasks[idx]._new; setTasks(activeDay, tasks); }
+    }, 400);
+  }
+
+  const cb = document.createElement('button');
+  cb.className = 'check-btn';
+  cb.innerHTML = `<svg class="check-tick" width="11" height="9" viewBox="0 0 11 9" fill="none">
+    <path d="M1 4.5l3 3 6-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+  cb.addEventListener('click', () => toggleTask(t.id));
+
+  const body = document.createElement('div');
+  body.className = 'task-body';
+  const txt = document.createElement('div');
+  txt.className = 'task-text';
+  txt.textContent = t.text;
+  body.appendChild(txt);
+  if (t.carried && t.carriedFrom) {
+    const meta = document.createElement('div');
+    meta.className = 'task-meta carried-tag';
+    meta.textContent = '↩ Carried from ' + labelForKey(t.carriedFrom);
+    body.appendChild(meta);
+  }
+
+  const del = document.createElement('button');
+  del.className = 'del-btn';
+  del.innerHTML = '&times;';
+  del.addEventListener('click', () => removeTask(t.id));
+
+  li.appendChild(cb);
+  li.appendChild(body);
+  li.appendChild(del);
+  return li;
+}
+
+// ─── Actions ─────────────────────────────────────────────────────────
+function addTask(text, dayKey) {
+  text = text.trim();
+  if (!text) return false;
+  const key   = dayKey || activeDay;
+  const tasks = getTasks(key);
+  tasks.unshift({ id: Date.now() + '-' + Math.random().toString(36).slice(2,5), text, done: false, _new: true });
+  setTasks(key, tasks);
+  if (key !== activeDay) { activeDay = key; }
+  render();
+  showToast(key === todayKey() ? 'Task added' : 'Added to ' + labelForKey(key));
+  return true;
+}
+
+function toggleTask(id) {
+  const tasks = getTasks(activeDay);
+  const t = tasks.find(x => x.id === id);
+  if (t) t.done = !t.done;
+  setTasks(activeDay, tasks);
+  render();
+}
+
+function removeTask(id) {
+  setTasks(activeDay, getTasks(activeDay).filter(x => x.id !== id));
+  render();
+}
+
+// ─── Sync ─────────────────────────────────────────────────────────────
+function setTab(tab) {
+  syncTab = tab;
+  document.getElementById('tabCopy').className  = 'modal-tab' + (tab === 'copy'  ? ' active' : '');
+  document.getElementById('tabPaste').className = 'modal-tab' + (tab === 'paste' ? ' active' : '');
+  const code = document.getElementById('syncCode');
+  const btn  = document.getElementById('syncAction');
+  if (tab === 'copy') {
+    const data = loadAll();
+    const hasData = Object.keys(data).length > 0;
+    document.getElementById('syncTitle').textContent = 'Copy to another device';
+    document.getElementById('syncDesc').textContent  = hasData
+      ? 'Tap "Copy code", then open this app on your other device → Sync → Import and paste it.'
+      : 'Add some tasks first, then come back to sync.';
+    code.value    = hasData ? btoa(unescape(encodeURIComponent(JSON.stringify(data)))) : '';
+    code.readOnly = true;
+    btn.textContent = 'Copy code';
+    btn.disabled    = !hasData;
+    btn.style.opacity = hasData ? '1' : '0.4';
+  } else {
+    document.getElementById('syncTitle').textContent = 'Import from another device';
+    document.getElementById('syncDesc').textContent  = 'Go to the other device → Sync → Copy code, then paste it below.';
+    code.value    = '';
+    code.readOnly = false;
+    btn.textContent = 'Import';
+    btn.disabled    = false;
+    btn.style.opacity = '1';
+    setTimeout(() => code.focus(), 200);
+  }
+}
+
+document.getElementById('syncBtn').addEventListener('click', () => {
+  setTab('copy');
+  document.getElementById('syncOverlay').classList.add('open');
+});
+
+document.getElementById('syncCancel').addEventListener('click', () => {
+  document.getElementById('syncOverlay').classList.remove('open');
+});
+
+document.getElementById('syncOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('syncOverlay'))
+    document.getElementById('syncOverlay').classList.remove('open');
+});
+
+document.getElementById('syncAction').addEventListener('click', () => {
+  if (syncTab === 'copy') {
+    const code = document.getElementById('syncCode').value;
+    (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject())
+      .catch(() => { document.getElementById('syncCode').select(); document.execCommand('copy'); })
+      .finally ? null : null;
+    navigator.clipboard?.writeText(code).catch(() => {
+      document.getElementById('syncCode').select();
+      document.execCommand('copy');
+    });
+    showToast('Code copied!');
+    document.getElementById('syncOverlay').classList.remove('open');
+  } else {
+    const raw = document.getElementById('syncCode').value.trim();
+    if (!raw) return showToast('Paste a sync code first');
+    try {
+      const imported = JSON.parse(decodeURIComponent(escape(atob(raw))));
+      if (typeof imported !== 'object' || Array.isArray(imported)) throw new Error();
+      const local = loadAll();
+      // Merge day by day
+      Object.keys(imported).forEach(key => {
+        const localTasks = local[key] || [];
+        const localIds   = new Set(localTasks.map(t => t.id));
+        imported[key].forEach(t => { if (!localIds.has(t.id)) localTasks.push(t); });
+        local[key] = localTasks;
+      });
+      saveAll(local);
+      render();
+      showToast('Synced!');
+      document.getElementById('syncOverlay').classList.remove('open');
+    } catch { showToast('Invalid sync code — try again'); }
+  }
+});
+
+// ─── Bottom bar ───────────────────────────────────────────────────────
+document.getElementById('clearDoneBtn').addEventListener('click', () => {
+  setTasks(activeDay, getTasks(activeDay).filter(t => !t.done));
+  render();
+  showToast('Completed tasks cleared');
+});
+
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  if (!confirm('Clear all tasks for ' + labelForKey(activeDay) + '?')) return;
+  setTasks(activeDay, []);
+  render();
+  showToast('Cleared');
+});
+
+// ─── Add bar ──────────────────────────────────────────────────────────
+document.getElementById('addBtn').addEventListener('click', () => {
+  const inp = document.getElementById('newInput');
+  if (addTask(inp.value)) inp.value = '';
+  inp.focus();
+});
+document.getElementById('newInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') { if (addTask(e.target.value)) e.target.value = ''; }
+});
+
+// ─── Toast ────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────
+carryOver();
+render();
+</script>
+</body>
+</html>

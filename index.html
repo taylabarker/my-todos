@@ -593,8 +593,27 @@ function showToast(msg) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
+// ─── URL param task injection ─────────────────────────────────────────
+// When I add a task via Cowork chat, I send a link like:
+// https://taylabarker.github.io/my-todos/?add=Task+text&day=2026-06-04
+// Tapping it on phone adds the task instantly.
+function processURLParams() {
+  const params = new URLSearchParams(window.location.search);
+  const text = params.get('add');
+  const day  = params.get('day') || todayKey();
+  if (!text) return;
+  // Add task if not already added (use URL as dedup key)
+  const doneKey = 'url_added_' + btoa(text + day).replace(/[^a-z0-9]/gi,'').substring(0,20);
+  if (localStorage.getItem(doneKey)) return;
+  addTask(decodeURIComponent(text), day);
+  localStorage.setItem(doneKey, '1');
+  // Clean URL without reloading
+  window.history.replaceState({}, '', window.location.pathname);
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────
 carryOver();
+processURLParams();
 render();
 </script>
 </body>
